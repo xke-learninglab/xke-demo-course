@@ -1,0 +1,113 @@
+title: Demo course for the XKE
+tagline: Github Learning Lab, what's that?
+description: Simple demo of custom course on Github learnin lab
+# Repository setup
+# The following section template information for the repository
+# This will be used when the repository is crated for each individual learner
+
+template:
+  name: xke-demo-course
+  repo: xke-demo-course-template
+
+# `before` block
+# Actions to take place after the learner registers, but before they start interacting with their repo
+
+before:
+  - type: updateBranchProtection
+  - type: createIssue
+    title: Welcome
+    body: 00_introduction-issue.md
+  - type: respond
+    issue: Welcome
+    with: 00_question.md
+    data:
+      user: '%payload.repository.owner.login%'
+
+# Steps for the course
+# A list of steps that take the learner through the course
+# Create one step for each action that a learner will complete
+
+steps:
+  # Step 1
+  # Learner responds to issue
+  # Bot responds with next step
+
+  - title: Respond to an issue
+    description: Respond to this issue to continue to the next step
+    event: issue_comment
+    link: '{{ repoUrl }}/issues/1'
+    actions:
+      - type: respond
+        issue: Welcome
+        with: 01_commented-on-issue.md
+  
+  # Step 2
+  # Learner closed to the issue
+  # Bot creates a new pull request for the next step
+
+  - title: Close an issue
+    description: Close an issue to continue to the next task/problem
+    event: issues.closed
+    link: '{{ repoUrl }}/issues/1'
+    actions:
+      - type: createPullRequest
+        body: 02_use-pull-request.md
+        title: Use pull request for communication
+        head: demo_pr
+        base: master
+        action_id: firstPr
+      - type: respond
+        issue: Welcome
+        with: 02_closed-issue.md
+        data:
+          url: '%actions.firstPr.data.html_url%'
+
+  # Step 3
+  # Learner reviewed the PR
+  # Bot responds and asks learner to approve and merge the PR
+  - title: Review a pull request
+    description: Review this pull request to continue to the next step
+    event: pull_request_review.submitted
+    link: '{{ repoUrl }}/pull/2'
+    actions:
+        - type: respond
+          with: 03_reviewed-pr.md
+  
+  # Step 4
+  # Learner merges the PR
+  # Bot responds and asks learner to approve and merge the PR
+  - title: Merge the pull request
+    description: Merge the pull request I've opened to continue to the next step
+    event: pull_request.closed
+    link: '{{ repoUrl }}/pull/2'
+    actions:
+        - type: createIssue
+          title: I'm a cheater
+          body: 04_create-issue.md
+          action_id: nextIssue
+        - type: respond
+          with: 04_merged-pr.md
+          data:
+            url: '%actions.nextIssue.data.html_url%'
+        - type: respond
+          issue: I'm a cheater
+          with: 00_question.md
+          data:
+            user: '%payload.repository.owner.login%'
+  # Step 5
+  # Learner answers the question
+  # Bot checks the answer and completes the course when the answer is correct
+  - title: Answer my question (again)
+    description: Answer my question (again), but this time I won't be fooled!
+    event: issue_comment.created
+    link: '{{ repoUrl }}/issue/3'
+    actions:
+        - type: gate
+          left: '42'
+          operator: test
+          right: '%payload.comment.body%'
+          else:
+            - type: respond
+              with: 05_wrong-answer.md
+        - type: respond
+          with: 05_correct-answer.md
